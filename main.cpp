@@ -1,7 +1,9 @@
 #include <iostream>
 #include "order_book.h"
+#include "trade_logger.h"
 
 int main() {
+    TradeLogger::init("trades.csv");
     OrderBook book;
     // Add some resting asks
     book.add_order(100.0, 10, false); // ask: 10 units @ £100

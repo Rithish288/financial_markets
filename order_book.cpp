@@ -3,8 +3,7 @@
 //
 
 #include "order_book.h"
-
-#include <iostream>
+#include "trade_logger.h"
 
 ID OrderBook::add_order(const double price, const uint32_t quantity, const bool is_bid) {
     Order order(price, quantity);
@@ -23,7 +22,7 @@ ID OrderBook::add_bid(Order& order) {
             order.quantity -= matched_quantity;
             oit->quantity -= matched_quantity;
             vol -= matched_quantity;
-            std::cout << "TRADE: BUY " << matched_quantity << " units at £" << price << "\n";
+            TradeLogger::log(price, matched_quantity, "AAPL", true);
 
             if (oit->quantity == 0) {
                 // Unlink the order from lookup and erase it from the price level
@@ -60,7 +59,7 @@ ID OrderBook::add_ask(Order& order) {
             order.quantity -= matched_quantity;
             oit->quantity -= matched_quantity;
             vol -= matched_quantity;
-            std::cout << "TRADE: SELL " << matched_quantity << " units at £" << price << "\n";
+            TradeLogger::log(price, matched_quantity, "MSFT", false);
 
             if (oit->quantity == 0) {
                 // Unlink the order from lookup and erase it from the price level
