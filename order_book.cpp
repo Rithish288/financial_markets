@@ -4,24 +4,86 @@
 
 #include "order_book.h"
 
-uint64_t OrderBook::add_order(const double price, const uint32_t quantity, const bool is_bid) {
-    if (is_bid) {
-        return add_bid(price, quantity);
+#include <iostream>
+
+ID OrderBook::add_order(const double price, const uint32_t quantity, const bool is_bid) {
+    Order order(price, quantity);
+    return is_bid ? add_bid(order) : add_ask(order);
+}
+
+ID OrderBook::add_bid(Order& order) {
+    // Loop through the asking price levels to find matching ask
+    for (auto it = ask_orders.begin(); it != ask_orders.end() && order.quantity > 0;) {
+        auto&[price, vol, orders] = it->second;
+        if (price > order.price) break;
+
+        // Loop through orders at the price level
+        for (auto oit = orders.begin(); oit != orders.end() && order.quantity > 0;) {
+            const uint32_t matched_quantity = std::min(order.quantity, oit->quantity);
+            order.quantity -= matched_quantity;
+            oit->quantity -= matched_quantity;
+            vol -= matched_quantity;
+            std::cout << "TRADE: BUY " << matched_quantity << " units at £" << price << "\n";
+
+            if (oit->quantity == 0) {
+                // Unlink the order from lookup and erase it from the price level
+                order_lookup.erase(oit->order_id);
+                oit = orders.erase(oit);
+            } else ++oit;
+        }
+        if (orders.empty()) {
+            it = ask_orders.erase(it);
+        } else ++it;
     }
-   return add_ask(price, quantity);
+
+    // If the order is not fully filled
+    if (order.quantity > 0) {
+        auto&[price, vol, orders] = bid_orders[order.price];
+        price = order.price;
+        vol += order.quantity;
+        orders.push_back(order);
+        // Link order lookup to the end of the list
+        order_lookup[order.order_id] = std::prev(orders.end());
+    }
+    return order.order_id;
 }
 
-uint64_t OrderBook::add_bid(const double price, const uint32_t quantity) {
-    bid_list.emplace_back(price, quantity);
-    return bid_list.back().order_id;
+ID OrderBook::add_ask(Order& order) {
+    // Loop through the asking price levels to find matching ask
+    for (auto it = bid_orders.begin(); it != bid_orders.end() && order.quantity > 0;) {
+        auto&[price, vol, orders] = it->second;
+        if (price < order.price) break;
+
+        // Loop through orders at the price level
+        for (auto oit = orders.begin(); oit != orders.end() && order.quantity > 0;) {
+            const uint32_t matched_quantity = std::min(order.quantity, oit->quantity);
+            order.quantity -= matched_quantity;
+            oit->quantity -= matched_quantity;
+            vol -= matched_quantity;
+            std::cout << "TRADE: SELL " << matched_quantity << " units at £" << price << "\n";
+
+            if (oit->quantity == 0) {
+                // Unlink the order from lookup and erase it from the price level
+                order_lookup.erase(oit->order_id);
+                oit = orders.erase(oit);
+            } else ++oit;
+        }
+        if (orders.empty()) {
+            it = bid_orders.erase(it);
+        } else ++it;
+    }
+
+    // If the order is not fully filled
+    if (order.quantity > 0) {
+        auto&[price, vol, orders] = ask_orders[order.price];
+        price = order.price;
+        vol += order.quantity;
+        orders.push_back(order);
+        // Link order lookup to the end of the list
+        order_lookup[order.order_id] = std::prev(orders.end());
+    }
+    return order.order_id;
 }
 
-uint64_t OrderBook::add_ask(const double price, const uint32_t quantity) {
-    ask_list.emplace_back(price, quantity);
-    return ask_list.back().order_id;
-}
 
-OrderBook::~OrderBook() {
-    bid_list.clear();
-    ask_list.clear();
-}
+OrderBook::~OrderBook() = default;

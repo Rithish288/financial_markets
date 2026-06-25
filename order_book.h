@@ -7,13 +7,19 @@
 
 #include <chrono>
 #include <list>
+#include <set>
+#include <map>
+#include <unordered_map>
+
+using ID = uint64_t;
 
 struct Order {
     double price;
     uint32_t quantity;
     uint64_t timestamp;
-    uint64_t order_id;
-    inline static uint64_t order_id_counter = 0;
+
+    ID order_id;
+    inline static ID order_id_counter = 0;
     Order(const double price, const uint32_t quantity) :
     price(price),
     quantity(quantity),
@@ -23,11 +29,27 @@ struct Order {
     };
 };
 
+struct CompareBid {
+    bool operator()(const Order& lhs, const Order& rhs) const {
+        if (lhs.price != rhs.price)
+            return lhs.price > rhs.price;
+        return lhs.timestamp < rhs.timestamp;
+    }
+};
+struct CompareAsk {
+    bool operator()(const Order& lhs, const Order& rhs) const {
+        if (lhs.price != rhs.price)
+            return lhs.price < rhs.price;
+        return lhs.timestamp < rhs.timestamp;
+    }
+};
+struct PriceLevel {
+    double price;
+    uint32_t vol;
+    std::list<Order> orders;
+};
 class OrderBook {
 public:
-    std::vector<Order> bid_list;
-    std::vector<Order> ask_list;
-
     /**
      * Creates and adds a new order to the order queue
      * @param price the price (per share) of the bid/ask
@@ -35,15 +57,16 @@ public:
      * @param is_bid 1=bid and 0=ask
      * @return the id of the order
      */
-    uint64_t add_order(double price, uint32_t quantity, bool is_bid);
-    void remove_order(uint64_t order_id);
-    void match_orders();
+    ID add_order(double price, uint32_t quantity, bool is_bid);
 
     ~OrderBook();
 
 private:
-    uint64_t add_bid(double price, uint32_t quantity);
-    uint64_t add_ask(double price, uint32_t quantity);
+    ID add_bid(Order& order);
+    ID add_ask(Order& order);
+    std::map<double, PriceLevel, std::greater<>> bid_orders;
+    std::map<double, PriceLevel, std::less<>> ask_orders;
+    std::unordered_map<ID, std::list<Order>::iterator> order_lookup;
 };
 
 #endif //FINANCIAL_MARKETS_ORDER_BOOK_H
