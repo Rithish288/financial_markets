@@ -7,4 +7,7 @@ add_executable(financial_markets main.cpp
         order_book.cpp
         order_book.h
         trade_logger.h
-        trade_logger.cpp)
+        trade_logger.cpp
+        trade_simulator.cpp
+        trade_simulator.h
+        order.h)

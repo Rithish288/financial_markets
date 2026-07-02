@@ -5,29 +5,11 @@
 #ifndef FINANCIAL_MARKETS_ORDER_BOOK_H
 #define FINANCIAL_MARKETS_ORDER_BOOK_H
 
-#include <chrono>
 #include <list>
 #include <set>
 #include <map>
 #include <unordered_map>
-
-using ID = uint64_t;
-
-struct Order {
-    double price;
-    uint32_t quantity;
-    uint64_t timestamp;
-
-    ID order_id;
-    inline static ID order_id_counter = 0;
-    Order(const double price, const uint32_t quantity) :
-    price(price),
-    quantity(quantity),
-    order_id(order_id_counter++) {
-        const auto now = std::chrono::high_resolution_clock::now();
-        timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    };
-};
+#include "order.h"
 
 struct CompareBid {
     bool operator()(const Order& lhs, const Order& rhs) const {
@@ -58,6 +40,7 @@ public:
      * @return the id of the order
      */
     ID add_order(double price, uint32_t quantity, bool is_bid);
+    void print_stats();
 
     ~OrderBook();
 
@@ -67,6 +50,10 @@ private:
     std::map<double, PriceLevel, std::greater<>> bid_orders;
     std::map<double, PriceLevel, std::less<>> ask_orders;
     std::unordered_map<ID, std::list<Order>::iterator> order_lookup;
+
+    uint64_t bid_orders_count = 0;
+    uint64_t ask_orders_count = 0;
+    uint64_t matched_orders_count = 0;
 };
 
 #endif //FINANCIAL_MARKETS_ORDER_BOOK_H

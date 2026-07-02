@@ -6,7 +6,7 @@ void TradeLogger::init(const std::string& filename) {
     if (file.is_open()) {
         file.close();
     }
-    file.open(filename, std::ios::app);
+    file.open(filename, std::ios::out);
     if (file.tellp() == 0)
         file << "timestamp,asset,side,price,quantity\n";
 }

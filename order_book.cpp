@@ -3,6 +3,9 @@
 //
 
 #include "order_book.h"
+
+#include <iostream>
+
 #include "trade_logger.h"
 
 ID OrderBook::add_order(const double price, const uint32_t quantity, const bool is_bid) {
@@ -11,6 +14,7 @@ ID OrderBook::add_order(const double price, const uint32_t quantity, const bool 
 }
 
 ID OrderBook::add_bid(Order& order) {
+    bid_orders_count++;
     // Loop through the asking price levels to find matching ask
     for (auto it = ask_orders.begin(); it != ask_orders.end() && order.quantity > 0;) {
         auto&[price, vol, orders] = it->second;
@@ -23,7 +27,7 @@ ID OrderBook::add_bid(Order& order) {
             oit->quantity -= matched_quantity;
             vol -= matched_quantity;
             TradeLogger::log(price, matched_quantity, "AAPL", true);
-
+            matched_orders_count++;
             if (oit->quantity == 0) {
                 // Unlink the order from lookup and erase it from the price level
                 order_lookup.erase(oit->order_id);
@@ -48,6 +52,7 @@ ID OrderBook::add_bid(Order& order) {
 }
 
 ID OrderBook::add_ask(Order& order) {
+    ask_orders_count++;
     // Loop through the asking price levels to find matching ask
     for (auto it = bid_orders.begin(); it != bid_orders.end() && order.quantity > 0;) {
         auto&[price, vol, orders] = it->second;
@@ -60,7 +65,7 @@ ID OrderBook::add_ask(Order& order) {
             oit->quantity -= matched_quantity;
             vol -= matched_quantity;
             TradeLogger::log(price, matched_quantity, "MSFT", false);
-
+            matched_orders_count++;
             if (oit->quantity == 0) {
                 // Unlink the order from lookup and erase it from the price level
                 order_lookup.erase(oit->order_id);
@@ -84,5 +89,12 @@ ID OrderBook::add_ask(Order& order) {
     return order.order_id;
 }
 
+void OrderBook::print_stats() {
+    std::cout << std::endl;
+    std::cout << "Total bid orders: " << bid_orders_count << '\n';
+    std::cout << "Total ask orders: " << ask_orders_count << '\n';
+    std::cout << "Total orders in book: " << order_lookup.size() << '\n';
+    std::cout << "Total orders matched: " << matched_orders_count << std::endl;
+}
 
 OrderBook::~OrderBook() = default;
